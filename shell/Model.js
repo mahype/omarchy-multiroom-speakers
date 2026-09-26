@@ -23,6 +23,7 @@ var STRINGS = {
     homeHint: "%1 refused the connection. In the Home app, open Home Settings → Speakers & TV and allow access for \"Anyone on the same network\".",
     refusedHint: "%1 refused the connection. Is it switched on and open for AirPlay? Details in owntone.log.",
     dismiss: "Dismiss",
+    pairFirst: "Switch %1 on to pair: it then shows a code, which you enter here. Needed once.",
     tvHint: "%1 shows a four-digit code on the TV when it is first connected. Enter it here to pair. No code? In the Home app, open Home Settings → Speakers & TV and allow access for \"Anyone on the same network\".",
     castHint: "OwnTone does not keep Chromecast in sync with AirPlay rooms; it plays about two seconds later. Use AirPlay for multiroom.",
     waitingFor: "switching, waiting for %1", offsetHint: "Delays this room against the others.",
@@ -55,6 +56,7 @@ var STRINGS = {
     homeHint: "%1 hat die Verbindung abgelehnt. In der Home-App unter Home-Einstellungen → Lautsprecher & TV den Zugriff für „Jeder im selben Netzwerk“ erlauben.",
     refusedHint: "%1 hat die Verbindung abgelehnt. Ist das Gerät eingeschaltet und für AirPlay freigegeben? Details in owntone.log.",
     dismiss: "Ausblenden",
+    pairFirst: "Zum Koppeln %1 einschalten: Dann erscheint ein Code, den du hier eingibst. Nur einmal nötig.",
     tvHint: "%1 zeigt beim ersten Verbinden einen vierstelligen Code auf dem Fernseher. Gib ihn hier ein, um zu koppeln. Kein Code? In der Home-App unter Home-Einstellungen → Lautsprecher & TV den Zugriff für „Jeder im selben Netzwerk“ erlauben.",
     castHint: "OwnTone hält Chromecast nicht synchron mit den AirPlay-Räumen, es spielt etwa zwei Sekunden später. Für Multiroom AirPlay nehmen.",
     waitingFor: "wechselt, warte auf %1", offsetHint: "Verzögert diesen Raum gegenüber den anderen.",
@@ -114,7 +116,7 @@ function subtitle(speaker, s) {
   var parts = [s.kinds[speaker.kind] || speaker.kind]
   if (speaker.missing) parts.push(s.missing)
   else if (speaker.failed) parts.push(s.failed)
-  else if (speaker.needsPin) parts.push(s.needsPin)
+  else if (speaker.needsPin || speaker.unpaired) parts.push(s.needsPin)
   if (speaker.playing) parts.push(s.playing)
   return parts.join(" · ")
 }

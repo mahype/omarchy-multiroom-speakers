@@ -120,6 +120,10 @@ Item {
     var now = Date.now()
     var shown = speakers.map(function(speaker) {
       var extra = { family: Multiroom.deviceFamily(models[speaker.name]) }
+      // Apple TVs and Macs pair once with a code; OwnTone only tells after a
+      // try, so one that never played here counts as not paired.
+      if (config.mode === "multiroom" && (extra.family === "appletv" || extra.family === "mac")
+          && config.multiroom.paired.indexOf(speaker.key) < 0 && !speaker.missing) extra.unpaired = true
       var failure = failures[speaker.key]
       if (failure && !speaker.missing) {
         if (failure.dismissed) extra.refused = true
@@ -232,6 +236,7 @@ Item {
       multiroom: {
         rooms: names(multi.rooms), volumes: Multiroom.normalizeVolumes(multi.volumes),
         known: normalizeKnown(multi.known), via: normalizeVia(multi.via),
+        paired: names(multi.paired),
         variants: normalizeVariants(multi.variants)
       },
       returnSink: String(value.returnSink || "").slice(0, 256)
@@ -725,6 +730,7 @@ Item {
         if (problem === "owntone-failed") problem = ""
         rememberKnown(found)
         rememberVariants(found)
+        rememberPaired(found)
         checkStale(found)
         noticeDropouts(found)
         var list = Multiroom.withMissing(found, config.multiroom.rooms, config.multiroom.known, function(s) { return s.key })
@@ -814,6 +820,18 @@ Item {
       pipePending = true
       ensureOwntone(function() { pollTimer.restart() })
     }))
+  }
+
+  // An Apple TV or Mac that played is paired from then on.
+  function rememberPaired(found) {
+    var added = found.filter(function(speaker) {
+      var family = Multiroom.deviceFamily(models[speaker.name])
+      return speaker.selected && !speaker.needsPin && (family === "appletv" || family === "mac")
+        && config.multiroom.paired.indexOf(speaker.key) < 0
+    }).map(function(speaker) { return speaker.key })
+    if (added.length === 0) return
+    log("paired: " + added.join(", "))
+    saveMulti({ paired: config.multiroom.paired.concat(added) })
   }
 
   // A chosen room that OwnTone deselected on its own lost its session.

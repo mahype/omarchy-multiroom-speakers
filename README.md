@@ -160,7 +160,8 @@ Behaviour worth knowing:
 - **Refusals.** A room that refuses shows why under its row, with the
   pairing code field, **Pair** and **Dismiss**. Dismiss switches it off; it
   moves down and folds, and shows the hint and pairing again when unfolded.
-  Apple TVs show a four-digit code on the TV when first connected. Macs accept
+  Apple TVs show a four-digit code on the TV when first connected; Apple
+  TVs and Macs that never played here are marked "needs pairing". Macs accept
   AirPlay only from the same Apple ID unless System Settings → General →
   AirDrop & Handoff → "Allow AirPlay for" is set to "Anyone on the same
   network" (then they show a code to enter in the panel); HomePods and Apple

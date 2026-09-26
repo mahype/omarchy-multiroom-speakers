@@ -127,3 +127,8 @@ test("Apple TVs pair with a code on the TV", () => {
   const tv = { name: "TV Wohnzimmer", family: "appletv", failed: true, needsPin: true }
   assert.ok(Model.connectHint(tv, "multiroom", de).startsWith("TV Wohnzimmer zeigt beim ersten Verbinden einen vierstelligen Code"))
 })
+
+test("Apple TVs and Macs that never played need pairing", () => {
+  assert.strictEqual(Model.subtitle({ kind: "airplay2", unpaired: true }, de), "AirPlay 2 · Kopplung nötig")
+  assert.ok(de.pairFirst.startsWith("Zum Koppeln %1 einschalten"))
+})

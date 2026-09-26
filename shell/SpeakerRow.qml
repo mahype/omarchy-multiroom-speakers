@@ -63,7 +63,7 @@ Column {
     readonly property string hint: Model.connectHint(row.speaker, row.mode, row.strings)
     readonly property bool inline: hint !== "" && row.speaker.refused !== true
     readonly property bool unfolded: row.expanded && row.present
-      && (row.speaker.refused === true || row.speaker.needsPin === true)
+      && (row.speaker.refused === true || row.speaker.needsPin === true || row.speaker.unpaired === true)
     readonly property bool pairing: row.present && row.speaker.needsPin === true
     visible: row.present && (inline || unfolded)
     x: Style.space(38)
@@ -84,6 +84,14 @@ Column {
       bar: row.bar
       width: parent.width
       text: row.strings.pinHint.replace("%1", row.speaker ? row.speaker.name : "")
+    }
+
+    // Not tried yet: how pairing starts.
+    HintText {
+      visible: help.hint === "" && !help.pairing && row.present && row.speaker.unpaired === true
+      bar: row.bar
+      width: parent.width
+      text: row.strings.pairFirst.replace("%1", row.speaker ? row.speaker.name : "")
     }
 
     Item {
