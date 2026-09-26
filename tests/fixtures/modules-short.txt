@@ -1,0 +1,7 @@
+536870912	module-always-sink		
+536870913	module-device-manager		
+536870914	module-device-restore		
+536870915	module-stream-restore		
+536870916	module-raop-discover		
+536870917	module-pipe-sink	file=/home/user/.local/state/omarchy-multiroom-speakers/library/Linux Audio sink_name=omarchy_multiroom format=s16le rate=44100 channels=2 sink_properties=device.description=Multiroom	
+536870920	module-combine-sink	sink_name=omarchy_multiroom_direct sinks=raop_sink.Badezimmer.local.10.0.0.211.7000,raop_sink.KEF.local.10.0.0.64.7000 latency_compensate=true

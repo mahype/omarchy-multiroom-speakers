@@ -1,0 +1,83 @@
+// Run with: node --test tests/
+const assert = require("assert")
+const test = require("node:test")
+
+const Model = require("../shell/Model.js")
+
+const de = Model.strings("de_DE")
+const en = Model.strings("en_US")
+
+const speakers = [
+  { key: "1", name: "Bad", kind: "airplay2", selected: true, volume: 40, playing: false, needsPin: false },
+  { key: "2", name: "KEF", kind: "chromecast", selected: false, volume: 50, playing: false, needsPin: false },
+  { key: "3", name: "TV", kind: "airplay2", selected: false, volume: null, playing: false, needsPin: true }
+]
+const state = (change) => Object.assign(Model.emptyState(), { mode: "multiroom", speakers: speakers }, change)
+
+test("summaries name mode and rooms", () => {
+  assert.strictEqual(Model.summary(Model.emptyState(), de), "Aus")
+  assert.strictEqual(Model.summary(state(), de), "Multiroom · 1 Raum")
+  assert.strictEqual(Model.summary(state({ mode: "direct", speakers: [] }), en), "Direct · No room selected")
+  assert.strictEqual(Model.summary(state({ starting: true }), en), "Multiroom · Starting OwnTone…")
+  assert.strictEqual(Model.summary(state({ problem: "raop-missing" }), de), "Multiroom · " + de.raopMissing)
+  assert.strictEqual(Model.roomsText(3, de), "3 Räume")
+})
+
+test("speaker subtitles", () => {
+  assert.strictEqual(Model.subtitle(speakers[0], de), "AirPlay 2")
+  assert.strictEqual(Model.subtitle(speakers[1], en), "Chromecast")
+  assert.strictEqual(Model.subtitle(speakers[2], de), "AirPlay 2 · Kopplung nötig")
+  assert.strictEqual(Model.subtitle(Object.assign({}, speakers[0], { missing: true }), de), "AirPlay 2 · nicht im Netz gefunden")
+  assert.strictEqual(Model.subtitle(Object.assign({}, speakers[0], { failed: true }), en), "AirPlay 2 · connection failed")
+  assert.strictEqual(Model.subtitle(Object.assign({}, speakers[0], { kind: "airplay", playing: true }), en),
+    "AirPlay · playing")
+})
+
+test("bar text, glyph and attention", () => {
+  assert.strictEqual(Model.barText(state()), "1")
+  assert.strictEqual(Model.barText(Model.emptyState()), "")
+  assert.strictEqual(Model.barText(state({ problem: "owntone-failed" })), "")
+  assert.notStrictEqual(Model.glyph("off"), Model.glyph("multiroom"))
+  assert.ok(Model.needsAttention(state({ owntoneOld: true })))
+  assert.ok(Model.needsAttention(state({ problem: "owntone-missing" })))
+  assert.ok(!Model.needsAttention(state()))
+  assert.ok(Model.needsAttention(state(), "Command failed"))
+  assert.ok(Model.needsAttention(state({ speakers: [Object.assign({}, speakers[0], { failed: true })] })))
+  assert.ok(!Model.needsAttention(state({ speakers: [Object.assign({}, speakers[0], { missing: true, failed: true })] })))
+  assert.ok(!Model.needsAttention(Object.assign(Model.emptyState(), { problem: "raop-missing" })))
+})
+
+test("tooltip lists the playing rooms", () => {
+  const text = Model.tooltip(state(), "", de)
+  assert.ok(text.startsWith("Multiroom: Multiroom · 1 Raum"))
+  assert.ok(text.includes("\nBad\n"))
+  assert.ok(text.endsWith(de.leftClick))
+})
+
+test("speakers by name and optimistic patches", () => {
+  assert.strictEqual(Model.speakerByName(speakers, "kef").key, "2")
+  assert.strictEqual(Model.speakerByName(speakers, "3").name, "TV")
+  assert.strictEqual(Model.speakerByName(speakers, "Küche"), null)
+  const twins = [{ key: "c", name: "KEF", kind: "chromecast" }, { key: "a", name: "KEF", kind: "airplay2" }]
+  assert.strictEqual(Model.speakerByName(twins, "KEF").key, "a")
+  const patched = Model.patchSpeakers(speakers, "2", { selected: true })
+  assert.strictEqual(patched[1].selected, true)
+  assert.strictEqual(speakers[1].selected, false)
+})
+
+test("a speaker with AirPlay and Chromecast is one device", () => {
+  const list = [
+    { key: "a", name: "KEF", kind: "airplay2", selected: false },
+    { key: "c", name: "KEF", kind: "chromecast", selected: false },
+    { key: "b", name: "Bad", kind: "airplay2", selected: true }
+  ]
+  const devices = Model.groupSpeakers(list, {})
+  assert.deepStrictEqual(devices.map((d) => d.name), ["KEF", "Bad"])
+  assert.strictEqual(devices[0].key, "a")
+  assert.deepStrictEqual(devices[0].variants, [{ key: "a", kind: "airplay2" }, { key: "c", kind: "chromecast" }])
+  assert.strictEqual(Model.groupSpeakers(list, { KEF: "chromecast" })[0].key, "c")
+  // The connection that plays wins over the preference.
+  const playing = list.map((s) => s.key === "a" ? Object.assign({}, s, { selected: true }) : s)
+  assert.strictEqual(Model.groupSpeakers(playing, { KEF: "chromecast" })[0].key, "a")
+  assert.strictEqual(devices[1].variants.length, 1)
+})

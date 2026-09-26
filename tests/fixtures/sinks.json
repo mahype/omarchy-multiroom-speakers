@@ -1,0 +1,157 @@
+[
+  {
+    "index": 2791,
+    "state": "SUSPENDED",
+    "name": "raop_sink.Badezimmer.local.10.0.0.211.7000",
+    "description": "Badezimmer",
+    "driver": "PipeWire",
+    "sample_specification": "s16le 2ch 44100Hz",
+    "channel_map": "front-left,front-right",
+    "owner_module": 4294967295,
+    "mute": false,
+    "volume": {
+      "front-left": {
+        "value": 65536,
+        "value_percent": "100%",
+        "db": "0.00 dB"
+      },
+      "front-right": {
+        "value": 65536,
+        "value_percent": "100%",
+        "db": "0.00 dB"
+      }
+    },
+    "balance": 0.00,
+    "base_volume": {
+      "value": 65536,
+      "value_percent": "100%",
+      "db": "0.00 dB"
+    },
+    "monitor_source": "raop_sink.Badezimmer.local.10.0.0.211.7000.monitor",
+    "latency": {
+      "actual": 0.00,
+      "configured": 0.00
+    },
+    "flags": [
+      "NETWORK",
+      "DECIBEL_VOLUME",
+      "LATENCY"
+    ],
+    "properties": {
+      "audio.format": "S16LE",
+      "audio.rate": "44100",
+      "device.icon_name": "audio-speakers",
+      "node.name": "raop_sink.Badezimmer.local.10.0.0.211.7000",
+      "device.description": "Badezimmer",
+      "node.latency": "10912/44100",
+      "node.virtual": "true",
+      "media.class": "Audio/Sink",
+      "media.name": "RAOP to Badezimmer",
+      "net.mtu": "1448",
+      "rtp.sender-ts-offset": "0",
+      "sess.media": "raop",
+      "sess.latency.msec": "250",
+      "sess.ts-direct": "0",
+      "rtp.mime": "L16",
+      "node.network": "true",
+      "rtp.ptime": "7.981859",
+      "rtp.framecount": "352",
+      "node.rate": "1/44100",
+      "rtp.media": "audio",
+      "rtp.payload": "96",
+      "rtp.ssrc": "1190114009",
+      "rtp.rate": "44100",
+      "rtp.channels": "2",
+      "stream.is-live": "true",
+      "node.want-driver": "true",
+      "node.autoconnect": "true",
+      "port.group": "stream.0",
+      "adapt.follower.spa-node": "",
+      "object.register": "false",
+      "factory.id": "7",
+      "clock.quantum-limit": "8192",
+      "node.loop.name": "data-loop.0",
+      "library.name": "audioconvert/libspa-audioconvert",
+      "client.id": "113",
+      "object.id": "120",
+      "object.serial": "2791"
+    },
+    "ports": [],
+    "active_port": null,
+    "formats": [
+      "pcm"
+    ]
+  },
+  {
+    "index": 2834,
+    "state": "IDLE",
+    "name": "omarchy_multiroom",
+    "description": "Multiroom",
+    "driver": "PipeWire",
+    "sample_specification": "s16le 2ch 44100Hz",
+    "channel_map": "front-left,front-right",
+    "owner_module": 536870917,
+    "mute": false,
+    "volume": {
+      "front-left": {
+        "value": 65536,
+        "value_percent": "100%",
+        "db": "0.00 dB"
+      },
+      "front-right": {
+        "value": 65536,
+        "value_percent": "100%",
+        "db": "0.00 dB"
+      }
+    },
+    "balance": 0.00,
+    "base_volume": {
+      "value": 65536,
+      "value_percent": "100%",
+      "db": "0.00 dB"
+    },
+    "monitor_source": "omarchy_multiroom.monitor",
+    "latency": {
+      "actual": 0.00,
+      "configured": 0.00
+    },
+    "flags": [
+      "DECIBEL_VOLUME",
+      "LATENCY"
+    ],
+    "properties": {
+      "node.name": "omarchy_multiroom",
+      "device.description": "Multiroom",
+      "device.icon_name": "audio-card",
+      "pulse.module.id": "536870917",
+      "node.loop.name": "data-loop.0",
+      "audio.format": "S16LE",
+      "audio.rate": "44100",
+      "audio.channels": "2",
+      "audio.position": "[ FL, FR ]",
+      "node.virtual": "true",
+      "media.class": "Audio/Sink",
+      "device.string": "/home/user/.local/state/omarchy-multiroom-speakers/library/Omarchy",
+      "node.rate": "1/44100",
+      "media.name": "pipe",
+      "stream.is-live": "true",
+      "node.want-driver": "true",
+      "node.autoconnect": "true",
+      "port.group": "stream.0",
+      "adapt.follower.spa-node": "",
+      "object.register": "false",
+      "factory.id": "7",
+      "clock.quantum-limit": "8192",
+      "library.name": "audioconvert/libspa-audioconvert",
+      "client.id": "159",
+      "object.id": "160",
+      "object.serial": "2834",
+      "node.driver-id": "69"
+    },
+    "ports": [],
+    "active_port": null,
+    "formats": [
+      "pcm"
+    ]
+  }
+]

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.mahype.omarchy-multiroom-speakers",
+  "name": "Omarchy Multiroom Speakers",
+  "version": "0.1.0",
+  "author": "Sven Wagener",
+  "license": "MIT",
+  "homepage": "https://github.com/mahype/omarchy-multiroom-speakers",
+  "description": "Play this computer's sound on AirPlay speakers such as HomePods, Sonos and Apple TV, in one room or in several at once. Direct mode uses PipeWire's own AirPlay; multiroom mode plays through OwnTone in sync like a Mac or iPhone, including Chromecast speakers.",
+  "kinds": [
+    "service",
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "service": "shell/Service.qml",
+    "barWidget": "shell/BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Multiroom Speakers",
+    "description": "Click to pick the mode and the rooms that play this computer's sound.",
+    "category": "Home",
+    "aliases": [
+      "airplay",
+      "multiroom",
+      "homepod",
+      "sonos",
+      "speakers",
+      "owntone"
+    ],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "showRoomsInBar": true,
+      "owntoneBinary": ""
+    },
+    "schema": [
+      {
+        "key": "showRoomsInBar",
+        "type": "boolean",
+        "label": "Show rooms in the bar",
+        "defaultValue": true,
+        "description": "Show the number of playing rooms next to the icon."
+      },
+      {
+        "key": "owntoneBinary",
+        "type": "string",
+        "label": "OwnTone program",
+        "defaultValue": "",
+        "description": "Optional. Full path to the owntone binary. Empty: the build from tools/build-owntone.sh, else /usr/bin/owntone."
+      }
+    ]
+  }
+}
