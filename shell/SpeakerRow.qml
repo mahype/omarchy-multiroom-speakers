@@ -5,8 +5,8 @@ import "Model.js" as Model
 
 // A device: switch and volume always in view. Unfolded (multiroom) it shows
 // how the device is reached — AirPlay or Chromecast, when it offers both —,
-// the delay against the other rooms. Hints for rooms that do not play and
-// the pairing code field show without unfolding.
+// the delay against the other rooms. A room that refuses shows why, with
+// pairing and "Dismiss", without unfolding.
 Column {
   id: row
 
@@ -54,39 +54,46 @@ Column {
     onCommitted: function(v) { row.service.setVolume(row.speaker.key, v) }
   }
 
-  // Why a room does not play and what to do, e.g. the Mac's AirPlay setting.
-  HintText {
-    readonly property string hint: Model.connectHint(row.speaker, row.mode, row.strings)
-    visible: hint !== ""
-    x: Style.space(38)
-    width: parent.width - x
-    bar: row.bar
-    text: hint
-    color: row.speaker && row.speaker.failed ? row.bar.urgent : row.bar.foreground
-    opacity: row.speaker && row.speaker.failed ? 1 : 0.6
-  }
-
-  // Pairing code shown by an Apple TV or Mac; in view without unfolding.
+  // Why a room does not play and what to do (e.g. the Mac's AirPlay
+  // setting), with pairing and "Dismiss". A room that refuses shows it right
+  // away; after "Dismiss" it moves down, folds and shows it again when
+  // unfolded.
   Column {
-    visible: row.present && row.speaker.needsPin === true
+    id: help
+    readonly property string hint: Model.connectHint(row.speaker, row.mode, row.strings)
+    readonly property bool inline: hint !== "" && row.speaker.refused !== true
+    readonly property bool unfolded: row.expanded && row.present
+      && (row.speaker.refused === true || row.speaker.needsPin === true)
+    readonly property bool pairing: row.present && row.speaker.needsPin === true
+    visible: row.present && (inline || unfolded)
     x: Style.space(38)
     width: parent.width - x
     spacing: Style.space(6)
 
     HintText {
-      visible: row.speaker !== null && row.speaker.needsPin === true
+      visible: help.hint !== ""
+      bar: row.bar
+      width: parent.width
+      text: help.hint
+      color: row.speaker && row.speaker.failed ? row.bar.urgent : row.bar.foreground
+      opacity: row.speaker && row.speaker.failed ? 1 : 0.6
+    }
+
+    HintText {
+      visible: help.pairing
       bar: row.bar
       width: parent.width
       text: row.strings.pinHint.replace("%1", row.speaker ? row.speaker.name : "")
     }
 
     Item {
-      visible: row.speaker !== null && row.speaker.needsPin === true
+      visible: help.pairing || help.inline
       width: parent.width
-      implicitHeight: pinField.implicitHeight
+      implicitHeight: Math.max(pinField.implicitHeight, dismissButton.implicitHeight)
 
       TextField {
         id: pinField
+        visible: help.pairing
         anchors.left: parent.left
         anchors.right: pinButton.left
         anchors.rightMargin: Style.space(6)
@@ -103,7 +110,9 @@ Column {
 
       Button {
         id: pinButton
-        anchors.right: parent.right
+        visible: help.pairing
+        anchors.right: dismissButton.visible ? dismissButton.left : parent.right
+        anchors.rightMargin: dismissButton.visible ? Style.space(6) : 0
         anchors.verticalCenter: parent.verticalCenter
         text: row.strings.pair
         foreground: row.bar.foreground
@@ -116,6 +125,22 @@ Column {
           if (row.service.sendPin(row.speaker.key, pinField.text)) pinField.text = ""
         }
         onClicked: send()
+      }
+
+      Button {
+        id: dismissButton
+        visible: help.inline
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        text: row.strings.dismiss
+        foreground: row.bar.foreground
+        fontFamily: row.bar.fontFamily
+        fontSize: Style.font.bodySmall
+        bordered: true
+        onClicked: {
+          if (row.expanded) row.expandToggled()
+          row.service.dismiss(row.speaker.key)
+        }
       }
     }
   }

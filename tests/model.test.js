@@ -72,14 +72,16 @@ test("a speaker with AirPlay and Chromecast is one device", () => {
     { key: "b", name: "Bad", kind: "airplay2", selected: true }
   ]
   const devices = Model.groupSpeakers(list, {})
-  assert.deepStrictEqual(devices.map((d) => d.name), ["KEF", "Bad"])
+  // The playing device comes first.
+  assert.deepStrictEqual(devices.map((d) => d.name), ["Bad", "KEF"])
+  devices.reverse()
   assert.strictEqual(devices[0].key, "a")
   assert.deepStrictEqual(devices[0].variants,
     [{ key: "a", kind: "airplay2", missing: false }, { key: "c", kind: "chromecast", missing: false }])
-  assert.strictEqual(Model.groupSpeakers(list, { KEF: "chromecast" })[0].key, "c")
+  assert.strictEqual(Model.groupSpeakers(list, { KEF: "chromecast" }).find((d) => d.name === "KEF").key, "c")
   // The connection that plays wins over the preference.
   const playing = list.map((s) => s.key === "a" ? Object.assign({}, s, { selected: true }) : s)
-  assert.strictEqual(Model.groupSpeakers(playing, { KEF: "chromecast" })[0].key, "a")
+  assert.strictEqual(Model.groupSpeakers(playing, { KEF: "chromecast" }).find((d) => d.name === "KEF").key, "a")
   assert.strictEqual(devices[1].variants.length, 1)
 })
 
@@ -104,4 +106,24 @@ test("hints for rooms that do not play", () => {
   assert.ok(Model.connectHint(pod, "multiroom", de).startsWith("Bad hat die Verbindung abgelehnt. In der Home-App"))
   assert.ok(Model.connectHint({ name: "KEF", family: "", failed: true }, "multiroom", en).startsWith("KEF refused"))
   assert.strictEqual(Model.connectHint({ name: "KEF", family: "", failed: true, missing: true }, "multiroom", en), "")
+})
+
+test("playing devices first, the rest after them", () => {
+  const list = [
+    { key: "1", name: "Arbeitszimmer", kind: "airplay2", selected: false },
+    { key: "2", name: "Zimmer", kind: "airplay2", selected: true },
+    { key: "3", name: "Mac", kind: "airplay2", selected: false, failed: true },
+    { key: "4", name: "Bad", kind: "airplay2", selected: true, missing: true }
+  ]
+  assert.deepStrictEqual(Model.groupSpeakers(list, {}).map((d) => d.name), ["Mac", "Zimmer", "Arbeitszimmer", "Bad"])
+})
+
+test("a dismissed refusal keeps its hint for the unfolded row", () => {
+  const mac = { name: "Mac mini", family: "mac", selected: false, refused: true }
+  assert.strictEqual(Model.connectHint(mac, "multiroom", de), de.macHint)
+})
+
+test("Apple TVs pair with a code on the TV", () => {
+  const tv = { name: "TV Wohnzimmer", family: "appletv", failed: true, needsPin: true }
+  assert.ok(Model.connectHint(tv, "multiroom", de).startsWith("TV Wohnzimmer zeigt beim ersten Verbinden einen vierstelligen Code"))
 })

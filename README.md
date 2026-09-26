@@ -155,7 +155,12 @@ Behaviour worth knowing:
   sound away from OwnTone until then.
 - **One device, one session.** A speaker offering AirPlay and Chromecast is
   selected with one of them only.
-- **Refusals.** A room that refuses shows why under its row: Macs accept
+- **Order.** Playing rooms (and rooms that refuse) are listed first, the
+  others after them.
+- **Refusals.** A room that refuses shows why under its row, with the
+  pairing code field, **Pair** and **Dismiss**. Dismiss switches it off; it
+  moves down and folds, and shows the hint and pairing again when unfolded.
+  Apple TVs show a four-digit code on the TV when first connected. Macs accept
   AirPlay only from the same Apple ID unless System Settings → General →
   AirDrop & Handoff → "Allow AirPlay for" is set to "Anyone on the same
   network" (then they show a code to enter in the panel); HomePods and Apple

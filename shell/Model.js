@@ -22,6 +22,8 @@ var STRINGS = {
     macSilentHint: "If nothing plays: Macs accept AirPlay only from devices with the same Apple ID. On the Mac, set System Settings → General → AirDrop & Handoff → \"Allow AirPlay for\" to \"Anyone on the same network\".",
     homeHint: "%1 refused the connection. In the Home app, open Home Settings → Speakers & TV and allow access for \"Anyone on the same network\".",
     refusedHint: "%1 refused the connection. Is it switched on and open for AirPlay? Details in owntone.log.",
+    dismiss: "Dismiss",
+    tvHint: "%1 shows a four-digit code on the TV when it is first connected. Enter it here to pair. No code? In the Home app, open Home Settings → Speakers & TV and allow access for \"Anyone on the same network\".",
     castHint: "OwnTone does not keep Chromecast in sync with AirPlay rooms; it plays about two seconds later. Use AirPlay for multiroom.",
     waitingFor: "switching, waiting for %1", offsetHint: "Delays this room against the others.",
     pin: "PIN", pinHint: "%1 shows a PIN. Enter it here to pair.", pair: "Pair",
@@ -52,6 +54,8 @@ var STRINGS = {
     macSilentHint: "Falls nichts zu hören ist: Macs nehmen AirPlay nur von Geräten mit derselben Apple-ID an. Am Mac unter Systemeinstellungen → Allgemein → AirDrop & Handoff „AirPlay erlauben für“ auf „Jeder im selben Netzwerk“ stellen.",
     homeHint: "%1 hat die Verbindung abgelehnt. In der Home-App unter Home-Einstellungen → Lautsprecher & TV den Zugriff für „Jeder im selben Netzwerk“ erlauben.",
     refusedHint: "%1 hat die Verbindung abgelehnt. Ist das Gerät eingeschaltet und für AirPlay freigegeben? Details in owntone.log.",
+    dismiss: "Ausblenden",
+    tvHint: "%1 zeigt beim ersten Verbinden einen vierstelligen Code auf dem Fernseher. Gib ihn hier ein, um zu koppeln. Kein Code? In der Home-App unter Home-Einstellungen → Lautsprecher & TV den Zugriff für „Jeder im selben Netzwerk“ erlauben.",
     castHint: "OwnTone hält Chromecast nicht synchron mit den AirPlay-Räumen, es spielt etwa zwei Sekunden später. Für Multiroom AirPlay nehmen.",
     waitingFor: "wechselt, warte auf %1", offsetHint: "Verzögert diesen Raum gegenüber den anderen.",
     pin: "PIN", pinHint: "%1 zeigt eine PIN an. Gib sie hier ein, um zu koppeln.", pair: "Koppeln",
@@ -162,12 +166,17 @@ function speakerByName(speakers, name) {
 
 // What to do about a room that does not play, shown under its row. Direct
 // mode cannot tell a refusal, so a chosen Mac gets the hint right away.
+// `refused` is a failure the user dismissed: the hint stays for when the row
+// is unfolded again.
 function connectHint(speaker, mode, s) {
   if (!speaker || speaker.missing) return ""
-  if (speaker.family === "mac" && (speaker.failed || (mode === "direct" && speaker.selected)))
-    return speaker.failed ? s.macHint : s.macSilentHint
-  if (!speaker.failed) return ""
-  if (speaker.family === "homepod" || speaker.family === "appletv") return s.homeHint.replace("%1", speaker.name)
+  var failed = speaker.failed === true || speaker.refused === true
+  if (speaker.family === "mac" && (failed || (mode === "direct" && speaker.selected)))
+    return failed ? s.macHint : s.macSilentHint
+  if (!failed) return ""
+  // Apple TVs pair with a code on the TV screen.
+  if (speaker.family === "appletv") return s.tvHint.replace("%1", speaker.name)
+  if (speaker.family === "homepod") return s.homeHint.replace("%1", speaker.name)
   return s.refusedHint.replace("%1", speaker.name)
 }
 
@@ -198,7 +207,20 @@ function groupSpeakers(speakers, via, known) {
     })
     options.sort(function(a, b) { return (a.kind === "chromecast" ? 1 : 0) - (b.kind === "chromecast" ? 1 : 0) })
     return Object.assign({}, chosen, { variants: options })
+  }).sort(function(a, b) {
+    // Playing devices first, the rest after them, each by name.
+    var x = active(a) ? 0 : 1
+    var y = active(b) ? 0 : 1
+    if (x !== y) return x - y
+    var n = a.name.toLowerCase()
+    var m = b.name.toLowerCase()
+    return n < m ? -1 : (n > m ? 1 : 0)
   })
+}
+
+// A device that is chosen and around; a refused one waiting for a fix too.
+function active(device) {
+  return device.selected === true && device.missing !== true || device.failed === true
 }
 
 // Expected state of a command before PipeWire or OwnTone confirm it.

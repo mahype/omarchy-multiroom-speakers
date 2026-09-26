@@ -97,6 +97,13 @@ BarWidget {
       if (!root.service) return "unavailable"
       return root.service.setVariant(String(name), String(kind)) ? "ok" : "unknown"
     }
+    // Gives up on a room that refused; it moves down and folds.
+    function dismiss(name: string): string {
+      if (!root.service) return "unavailable"
+      var speaker = Model.speakerByName(root.state.speakers, name)
+      if (!speaker) return "unknown"
+      return root.service.dismiss(speaker.key) ? "ok" : "unavailable"
+    }
     // Adds or removes a room by name: state is "on", "off" or "toggle".
     function room(name: string, state: string): string {
       if (!root.service) return "unavailable"

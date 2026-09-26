@@ -120,7 +120,11 @@ Item {
     var now = Date.now()
     var shown = speakers.map(function(speaker) {
       var extra = { family: Multiroom.deviceFamily(models[speaker.name]) }
-      if (failures[speaker.key] && !speaker.missing) extra.failed = true
+      var failure = failures[speaker.key]
+      if (failure && !speaker.missing) {
+        if (failure.dismissed) extra.refused = true
+        else extra.failed = true
+      }
       return Object.assign({}, speaker, extra)
     })
     Object.keys(holds).forEach(function(key) {
@@ -244,9 +248,9 @@ Item {
   function saveDirect(change) { saveConfig({ direct: Object.assign({}, config.direct, change) }) }
   function saveMulti(change) { saveConfig({ multiroom: Object.assign({}, config.multiroom, change) }) }
 
-  function setFailure(key, reason) {
+  function setFailure(key, reason, dismissed) {
     var next = Object.assign({}, failures)
-    if (reason) next[key] = { reason: reason, at: Date.now() }
+    if (reason) next[key] = { reason: reason, at: Date.now(), dismissed: dismissed === true }
     else delete next[key]
     failures = next
   }
@@ -929,7 +933,8 @@ Item {
         // The row says why and what to do (Model.connectHint).
         setFailure(target.key, "refused")
         log("refused: " + target.name + " [" + target.kind + "], see owntone.log")
-      } else if (ok) {
+      } else if (on && ok) {
+        // Switching off keeps a dismissed refusal for the unfolded row.
         setFailure(target.key, "")
       }
       pollTimer.restart()
@@ -941,6 +946,8 @@ Item {
     if (!target || switching) return false
     error = ""
     log((on ? "select " : "deselect ") + target.name + " [" + target.kind + "]")
+    // A new try starts without the old refusal.
+    if (on) setFailure(key, "")
     hold(key, { selected: !!on })
     if (config.mode === "direct") {
       var rooms = config.direct.rooms.filter(function(name) { return name !== key })
@@ -1018,6 +1025,21 @@ Item {
     delete next[knownKey]
     retries = next
     log("waiting for " + name + " [" + kind + "] to announce itself")
+    return true
+  }
+
+  // Gives up on a room that refused: it is switched off and moves down; the
+  // hint and pairing stay for when its row is unfolded again.
+  function dismiss(key) {
+    var target = speaker(key)
+    if (!target) return false
+    var failure = failures[key]
+    log("dismiss " + target.name + " [" + target.kind + "]")
+    if (target.selected || config.mode === "direct" && config.direct.rooms.indexOf(target.name) >= 0
+        || config.mode === "multiroom" && config.multiroom.rooms.indexOf(key) >= 0)
+      setSelected(key, false)
+    setFailure(key, failure ? failure.reason : "dismissed", true)
+    publish()
     return true
   }
 
