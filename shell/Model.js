@@ -18,6 +18,10 @@ var STRINGS = {
     owntoneOld: "HomePods with HomePod OS 27 refuse this OwnTone build. tools/build-owntone.sh builds a current one.",
     commandFailed: "Command failed",
     volume: "Volume", offset: "Delay", connection: "Connection",
+    macHint: "Macs accept AirPlay only from devices with the same Apple ID. On the Mac, open System Settings → General → AirDrop & Handoff, turn on AirPlay Receiver and set \"Allow AirPlay for\" to \"Anyone on the same network\". Then enter the code the Mac shows here.",
+    macSilentHint: "If nothing plays: Macs accept AirPlay only from devices with the same Apple ID. On the Mac, set System Settings → General → AirDrop & Handoff → \"Allow AirPlay for\" to \"Anyone on the same network\".",
+    homeHint: "%1 refused the connection. In the Home app, open Home Settings → Speakers & TV and allow access for \"Anyone on the same network\".",
+    refusedHint: "%1 refused the connection. Is it switched on and open for AirPlay? Details in owntone.log.",
     castHint: "OwnTone does not keep Chromecast in sync with AirPlay rooms; it plays about two seconds later. Use AirPlay for multiroom.",
     waitingFor: "switching, waiting for %1", offsetHint: "Delays this room against the others.",
     pin: "PIN", pinHint: "%1 shows a PIN. Enter it here to pair.", pair: "Pair",
@@ -44,6 +48,10 @@ var STRINGS = {
     owntoneOld: "HomePods mit HomePod OS 27 lehnen diese OwnTone-Version ab. tools/build-owntone.sh baut eine aktuelle.",
     commandFailed: "Befehl fehlgeschlagen",
     volume: "Lautstärke", offset: "Verzögerung", connection: "Verbindung",
+    macHint: "Macs nehmen AirPlay nur von Geräten mit derselben Apple-ID an. Am Mac unter Systemeinstellungen → Allgemein → AirDrop & Handoff „AirPlay-Empfänger“ einschalten und „AirPlay erlauben für“ auf „Jeder im selben Netzwerk“ stellen. Den Code, den der Mac dann zeigt, hier eingeben.",
+    macSilentHint: "Falls nichts zu hören ist: Macs nehmen AirPlay nur von Geräten mit derselben Apple-ID an. Am Mac unter Systemeinstellungen → Allgemein → AirDrop & Handoff „AirPlay erlauben für“ auf „Jeder im selben Netzwerk“ stellen.",
+    homeHint: "%1 hat die Verbindung abgelehnt. In der Home-App unter Home-Einstellungen → Lautsprecher & TV den Zugriff für „Jeder im selben Netzwerk“ erlauben.",
+    refusedHint: "%1 hat die Verbindung abgelehnt. Ist das Gerät eingeschaltet und für AirPlay freigegeben? Details in owntone.log.",
     castHint: "OwnTone hält Chromecast nicht synchron mit den AirPlay-Räumen, es spielt etwa zwei Sekunden später. Für Multiroom AirPlay nehmen.",
     waitingFor: "wechselt, warte auf %1", offsetHint: "Verzögert diesen Raum gegenüber den anderen.",
     pin: "PIN", pinHint: "%1 zeigt eine PIN an. Gib sie hier ein, um zu koppeln.", pair: "Koppeln",
@@ -152,6 +160,17 @@ function speakerByName(speakers, name) {
   return airplay.length > 0 ? airplay[0] : (found.length > 0 ? found[0] : null)
 }
 
+// What to do about a room that does not play, shown under its row. Direct
+// mode cannot tell a refusal, so a chosen Mac gets the hint right away.
+function connectHint(speaker, mode, s) {
+  if (!speaker || speaker.missing) return ""
+  if (speaker.family === "mac" && (speaker.failed || (mode === "direct" && speaker.selected)))
+    return speaker.failed ? s.macHint : s.macSilentHint
+  if (!speaker.failed) return ""
+  if (speaker.family === "homepod" || speaker.family === "appletv") return s.homeHint.replace("%1", speaker.name)
+  return s.refusedHint.replace("%1", speaker.name)
+}
+
 // One row per device: a speaker reachable over AirPlay and Chromecast under
 // one name is one device with two connections. The row shows the connection
 // that plays, else the preferred one (via: { name: kind }), else AirPlay.
@@ -193,5 +212,6 @@ if (typeof module !== "undefined") module.exports = {
   STRINGS: STRINGS, strings: strings, isGerman: isGerman, emptyState: emptyState,
   selectedCount: selectedCount, roomsText: roomsText, problemText: problemText, summary: summary,
   subtitle: subtitle, needsAttention: needsAttention, glyph: glyph, barText: barText, tooltip: tooltip,
-  speakerByName: speakerByName, patchSpeakers: patchSpeakers, groupSpeakers: groupSpeakers
+  speakerByName: speakerByName, patchSpeakers: patchSpeakers, groupSpeakers: groupSpeakers,
+  connectHint: connectHint
 }

@@ -155,6 +155,13 @@ Behaviour worth knowing:
   sound away from OwnTone until then.
 - **One device, one session.** A speaker offering AirPlay and Chromecast is
   selected with one of them only.
+- **Refusals.** A room that refuses shows why under its row: Macs accept
+  AirPlay only from the same Apple ID unless System Settings → General →
+  AirDrop & Handoff → "Allow AirPlay for" is set to "Anyone on the same
+  network" (then they show a code to enter in the panel); HomePods and Apple
+  TVs need "Anyone on the same network" under Speakers & TV in the Home app.
+  In direct mode, where refusals cannot be seen, a chosen Mac shows the hint
+  right away.
 - **Dropouts.** A chosen room that drops out is marked in the panel and asked
   again up to three times, 20 seconds apart. Rooms that are not on the network
   (standby, off) stay in the list as "not found" and join when they return.

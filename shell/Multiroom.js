@@ -179,6 +179,35 @@ function isOwnSink(name) {
   return value === PIPE_SINK || value === COMBINE_SINK || value.indexOf("raop_sink.") === 0
 }
 
+// ---- Device models -----------------------------------------------------------------
+
+// avahi escapes names: "Mac\032mini" → "Mac mini"
+function decodeAvahi(text) {
+  return String(text || "").replace(/\\(\d{3})/g, function(all, code) { return String.fromCharCode(Number(code)) })
+}
+
+// `avahi-browse -rpt _airplay._tcp` → { name: model }, e.g. "Mac16,10",
+// "AudioAccessory5,1" (HomePod mini), "AppleTV6,2", "LSX II".
+function parseAvahiModels(text) {
+  var out = {}
+  String(text || "").split("\n").forEach(function(line) {
+    if (line.charAt(0) !== "=") return
+    var fields = line.split(";")
+    var model = line.match(/"model=([^"]*)"/)
+    if (fields.length > 3 && model) out[decodeAvahi(fields[3])] = model[1]
+  })
+  return out
+}
+
+// What kind of Apple device a model is; "" for everything else.
+function deviceFamily(model) {
+  var value = String(model || "")
+  if (/^(Mac|iMac|MacBook)/.test(value)) return "mac"
+  if (/^AudioAccessory/.test(value)) return "homepod"
+  if (/^AppleTV/.test(value)) return "appletv"
+  return ""
+}
+
 // ---- OwnTone -----------------------------------------------------------------------
 
 var OUTPUT_KINDS = { "AirPlay 2": "airplay2", "AirPlay": "airplay", "AirPlay 1": "airplay", "Chromecast": "chromecast" }
@@ -341,7 +370,8 @@ if (typeof module !== "undefined") module.exports = {
   PIPE_NAME: PIPE_NAME, OWNTONE_PORT: OWNTONE_PORT, CONTROL_PORT: CONTROL_PORT, TIMING_PORT: TIMING_PORT,
   OS27_USER_AGENT: OS27_USER_AGENT,
   normalizeMode: normalizeMode, clampPercent: clampPercent, parseRaopName: parseRaopName,
-  parseSinks: parseSinks, parseModules: parseModules, parseVolumeLine: parseVolumeLine, moduleArg: moduleArg, findModules: findModules,
+  parseSinks: parseSinks, parseModules: parseModules, parseVolumeLine: parseVolumeLine,
+  decodeAvahi: decodeAvahi, parseAvahiModels: parseAvahiModels, deviceFamily: deviceFamily, moduleArg: moduleArg, findModules: findModules,
   pipeSinkArgs: pipeSinkArgs, combineSinkArgs: combineSinkArgs, combinedSinks: combinedSinks,
   sameList: sameList, directSpeakers: directSpeakers, directTarget: directTarget, isOwnSink: isOwnSink,
   parseOutputs: parseOutputs, parsePlayer: parsePlayer, confString: confString,

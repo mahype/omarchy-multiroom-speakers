@@ -5,7 +5,8 @@ import "Model.js" as Model
 
 // A device: switch and volume always in view. Unfolded (multiroom) it shows
 // how the device is reached — AirPlay or Chromecast, when it offers both —,
-// the delay against the other rooms and pairing.
+// the delay against the other rooms. Hints for rooms that do not play and
+// the pairing code field show without unfolding.
 Column {
   id: row
 
@@ -51,6 +52,72 @@ Column {
     glyph: String.fromCodePoint(0xF057E)  // volume-high
     value: row.speaker && typeof row.speaker.volume === "number" ? row.speaker.volume : 0
     onCommitted: function(v) { row.service.setVolume(row.speaker.key, v) }
+  }
+
+  // Why a room does not play and what to do, e.g. the Mac's AirPlay setting.
+  HintText {
+    readonly property string hint: Model.connectHint(row.speaker, row.mode, row.strings)
+    visible: hint !== ""
+    x: Style.space(38)
+    width: parent.width - x
+    bar: row.bar
+    text: hint
+    color: row.speaker && row.speaker.failed ? row.bar.urgent : row.bar.foreground
+    opacity: row.speaker && row.speaker.failed ? 1 : 0.6
+  }
+
+  // Pairing code shown by an Apple TV or Mac; in view without unfolding.
+  Column {
+    visible: row.present && row.speaker.needsPin === true
+    x: Style.space(38)
+    width: parent.width - x
+    spacing: Style.space(6)
+
+    HintText {
+      visible: row.speaker !== null && row.speaker.needsPin === true
+      bar: row.bar
+      width: parent.width
+      text: row.strings.pinHint.replace("%1", row.speaker ? row.speaker.name : "")
+    }
+
+    Item {
+      visible: row.speaker !== null && row.speaker.needsPin === true
+      width: parent.width
+      implicitHeight: pinField.implicitHeight
+
+      TextField {
+        id: pinField
+        anchors.left: parent.left
+        anchors.right: pinButton.left
+        anchors.rightMargin: Style.space(6)
+        anchors.verticalCenter: parent.verticalCenter
+        placeholderText: row.strings.pin
+        font.family: row.bar.fontFamily
+        font.pixelSize: Style.font.bodySmall
+        foreground: row.bar.foreground
+        horizontalPadding: Style.spacing.controlGap
+        verticalPadding: Style.spacing.controlPaddingY
+        onActiveFocusChanged: row.fieldFocus(activeFocus ? pinField : null)
+        onAccepted: pinButton.send()
+      }
+
+      Button {
+        id: pinButton
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        text: row.strings.pair
+        foreground: row.bar.foreground
+        fontFamily: row.bar.fontFamily
+        fontSize: Style.font.bodySmall
+        bordered: true
+        enabled: pinField.text.trim() !== ""
+        function send() {
+          if (!enabled) return
+          if (row.service.sendPin(row.speaker.key, pinField.text)) pinField.text = ""
+        }
+        onClicked: send()
+      }
+    }
   }
 
   Column {
@@ -119,52 +186,6 @@ Column {
         width: parent.width
         text: row.strings.offsetHint
         font.pixelSize: Style.font.caption
-      }
-    }
-
-    HintText {
-      visible: row.speaker !== null && row.speaker.needsPin === true
-      bar: row.bar
-      width: parent.width
-      text: row.strings.pinHint.replace("%1", row.speaker ? row.speaker.name : "")
-    }
-
-    Item {
-      visible: row.speaker !== null && row.speaker.needsPin === true
-      width: parent.width
-      implicitHeight: pinField.implicitHeight
-
-      TextField {
-        id: pinField
-        anchors.left: parent.left
-        anchors.right: pinButton.left
-        anchors.rightMargin: Style.space(6)
-        anchors.verticalCenter: parent.verticalCenter
-        placeholderText: row.strings.pin
-        font.family: row.bar.fontFamily
-        font.pixelSize: Style.font.bodySmall
-        foreground: row.bar.foreground
-        horizontalPadding: Style.spacing.controlGap
-        verticalPadding: Style.spacing.controlPaddingY
-        onActiveFocusChanged: row.fieldFocus(activeFocus ? pinField : null)
-        onAccepted: pinButton.send()
-      }
-
-      Button {
-        id: pinButton
-        anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
-        text: row.strings.pair
-        foreground: row.bar.foreground
-        fontFamily: row.bar.fontFamily
-        fontSize: Style.font.bodySmall
-        bordered: true
-        enabled: pinField.text.trim() !== ""
-        function send() {
-          if (!enabled) return
-          if (row.service.sendPin(row.speaker.key, pinField.text)) pinField.text = ""
-        }
-        onClicked: send()
       }
     }
   }

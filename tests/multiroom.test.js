@@ -157,3 +157,16 @@ test("sink volume lines", () => {
   assert.strictEqual(M.parseVolumeLine("Volume: front-left: 68811 / 105% / 1.27 dB"), 105)
   assert.strictEqual(M.parseVolumeLine("Failed"), null)
 })
+
+test("device models from mDNS", () => {
+  const models = M.parseAvahiModels(fixture("avahi-airplay.txt"))
+  assert.strictEqual(models["Mac mini"], "Mac16,10")
+  assert.strictEqual(models["Badezimmer"], "AudioAccessory5,1")
+  assert.strictEqual(models["KEF"], "LSX II")
+  assert.strictEqual(M.deviceFamily(models["Mac mini"]), "mac")
+  assert.strictEqual(M.deviceFamily(models["MacBook"]), "mac")
+  assert.strictEqual(M.deviceFamily(models["Badezimmer"]), "homepod")
+  assert.strictEqual(M.deviceFamily(models["TV Wohnzimmer"]), "appletv")
+  assert.strictEqual(M.deviceFamily(models["KEF"]), "")
+  assert.strictEqual(M.decodeAvahi("Q-Series\\032Soundbar"), "Q-Series Soundbar")
+})

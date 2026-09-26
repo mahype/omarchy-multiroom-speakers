@@ -104,6 +104,10 @@ Item {
   property var retries: ({})
   // Since when a chosen connection is missing from OwnTone's list while its
   // device is listed under another connection; last restart for that.
+  // Device models from mDNS ({ name: model }), to tell Macs, HomePods and
+  // Apple TVs apart; refreshed every few minutes.
+  property var models: ({})
+  property real modelsAt: 0
   property real staleSince: 0
   property real staleRestartAt: 0
 
@@ -115,7 +119,9 @@ Item {
   function publish() {
     var now = Date.now()
     var shown = speakers.map(function(speaker) {
-      return failures[speaker.key] && !speaker.missing ? Object.assign({}, speaker, { failed: true }) : speaker
+      var extra = { family: Multiroom.deviceFamily(models[speaker.name]) }
+      if (failures[speaker.key] && !speaker.missing) extra.failed = true
+      return Object.assign({}, speaker, extra)
     })
     Object.keys(holds).forEach(function(key) {
       if (holds[key].until > now) shown = Model.patchSpeakers(shown, key, holds[key].change)
@@ -268,7 +274,7 @@ Item {
   // something are logged, together with their result.
   function quiet(argv) {
     var tool = argv[0]
-    if (["test", "grep", "true", "install", "cat"].indexOf(tool) >= 0) return true
+    if (["test", "grep", "true", "install", "cat", "timeout"].indexOf(tool) >= 0) return true
     if (tool === "pactl") return ["list", "get-default-sink", "get-sink-volume", "-f"].indexOf(argv[1]) >= 0
     if (tool === "systemctl") return argv.indexOf("is-active") >= 0
     if (tool === "curl") return true
@@ -920,8 +926,8 @@ Item {
     api("PUT", "/api/outputs/" + encodeURIComponent(target.key), body, guard(function(ok) {
       if (on && !ok) {
         // OwnTone answers 400 when the speaker refused the session.
+        // The row says why and what to do (Model.connectHint).
         setFailure(target.key, "refused")
-        error = strings.connectFailed.replace("%1", target.name)
         log("refused: " + target.name + " [" + target.kind + "], see owntone.log")
       } else if (ok) {
         setFailure(target.key, "")
@@ -1069,7 +1075,18 @@ Item {
     return true
   }
 
+  function loadModels() {
+    modelsAt = Date.now()
+    run(["timeout", "5", "avahi-browse", "-rpt", "_airplay._tcp"], function(code, out) {
+      var found = Multiroom.parseAvahiModels(out)
+      if (Object.keys(found).length === 0) return
+      models = Object.assign({}, models, found)
+      publish()
+    })
+  }
+
   function refresh() {
+    if (config.mode !== "off" && Date.now() - modelsAt > 300000) loadModels()
     // A reading that hangs for long is not waited for forever.
     if (polling && Date.now() - pollStarted < 15000) return
     if (config.mode !== "direct" && config.mode !== "multiroom") return

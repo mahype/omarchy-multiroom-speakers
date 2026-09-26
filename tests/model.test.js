@@ -93,3 +93,15 @@ test("a connection that is gone stays selectable", () => {
   ])
   assert.strictEqual(devices[0].key, "c")
 })
+
+test("hints for rooms that do not play", () => {
+  const mac = { name: "Mac mini", family: "mac", selected: true, failed: true }
+  assert.strictEqual(Model.connectHint(mac, "multiroom", de), de.macHint)
+  assert.strictEqual(Model.connectHint(Object.assign({}, mac, { failed: false }), "multiroom", de), "")
+  // Direct mode cannot see refusals; a chosen Mac gets the hint at once.
+  assert.strictEqual(Model.connectHint(Object.assign({}, mac, { failed: false }), "direct", de), de.macSilentHint)
+  const pod = { name: "Bad", family: "homepod", selected: true, failed: true }
+  assert.ok(Model.connectHint(pod, "multiroom", de).startsWith("Bad hat die Verbindung abgelehnt. In der Home-App"))
+  assert.ok(Model.connectHint({ name: "KEF", family: "", failed: true }, "multiroom", en).startsWith("KEF refused"))
+  assert.strictEqual(Model.connectHint({ name: "KEF", family: "", failed: true, missing: true }, "multiroom", en), "")
+})
