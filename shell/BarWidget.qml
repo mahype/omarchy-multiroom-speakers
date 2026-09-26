@@ -92,6 +92,11 @@ BarWidget {
       var rooms = root.state.speakers.filter(function(s) { return s.selected }).map(function(s) { return s.name })
       return root.state.mode + (rooms.length > 0 ? ": " + rooms.join(", ") : "")
     }
+    // How a device is reached in multiroom mode: "airplay2" or "chromecast".
+    function connection(name: string, kind: string): string {
+      if (!root.service) return "unavailable"
+      return root.service.setVariant(String(name), String(kind)) ? "ok" : "unknown"
+    }
     // Adds or removes a room by name: state is "on", "off" or "toggle".
     function room(name: string, state: string): string {
       if (!root.service) return "unavailable"

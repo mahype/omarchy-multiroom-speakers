@@ -74,10 +74,22 @@ test("a speaker with AirPlay and Chromecast is one device", () => {
   const devices = Model.groupSpeakers(list, {})
   assert.deepStrictEqual(devices.map((d) => d.name), ["KEF", "Bad"])
   assert.strictEqual(devices[0].key, "a")
-  assert.deepStrictEqual(devices[0].variants, [{ key: "a", kind: "airplay2" }, { key: "c", kind: "chromecast" }])
+  assert.deepStrictEqual(devices[0].variants,
+    [{ key: "a", kind: "airplay2", missing: false }, { key: "c", kind: "chromecast", missing: false }])
   assert.strictEqual(Model.groupSpeakers(list, { KEF: "chromecast" })[0].key, "c")
   // The connection that plays wins over the preference.
   const playing = list.map((s) => s.key === "a" ? Object.assign({}, s, { selected: true }) : s)
   assert.strictEqual(Model.groupSpeakers(playing, { KEF: "chromecast" })[0].key, "a")
   assert.strictEqual(devices[1].variants.length, 1)
+})
+
+test("a connection that is gone stays selectable", () => {
+  // A KEF playing over Chromecast stops announcing AirPlay.
+  const list = [{ key: "c", name: "KEF", kind: "chromecast", selected: true }]
+  const devices = Model.groupSpeakers(list, { KEF: "chromecast" }, { KEF: { airplay2: "a", chromecast: "c" } })
+  assert.deepStrictEqual(devices[0].variants, [
+    { key: "a", kind: "airplay2", missing: true },
+    { key: "c", kind: "chromecast", missing: false }
+  ])
+  assert.strictEqual(devices[0].key, "c")
 })

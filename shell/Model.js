@@ -17,7 +17,9 @@ var STRINGS = {
     owntoneFailed: "OwnTone does not start. Its log: %1",
     owntoneOld: "HomePods with HomePod OS 27 refuse this OwnTone build. tools/build-owntone.sh builds a current one.",
     commandFailed: "Command failed",
-    volume: "Volume", offset: "Delay", connection: "Connection", offsetHint: "Delays this room against the others.",
+    volume: "Volume", offset: "Delay", connection: "Connection",
+    castHint: "OwnTone does not keep Chromecast in sync with AirPlay rooms; it plays about two seconds later. Use AirPlay for multiroom.",
+    waitingFor: "switching, waiting for %1", offsetHint: "Delays this room against the others.",
     pin: "PIN", pinHint: "%1 shows a PIN. Enter it here to pair.", pair: "Pair",
     kinds: { airplay: "AirPlay", airplay2: "AirPlay 2", chromecast: "Chromecast" },
     playing: "playing", needsPin: "needs pairing",
@@ -41,7 +43,9 @@ var STRINGS = {
     owntoneFailed: "OwnTone startet nicht. Sein Log: %1",
     owntoneOld: "HomePods mit HomePod OS 27 lehnen diese OwnTone-Version ab. tools/build-owntone.sh baut eine aktuelle.",
     commandFailed: "Befehl fehlgeschlagen",
-    volume: "Lautstärke", offset: "Verzögerung", connection: "Verbindung", offsetHint: "Verzögert diesen Raum gegenüber den anderen.",
+    volume: "Lautstärke", offset: "Verzögerung", connection: "Verbindung",
+    castHint: "OwnTone hält Chromecast nicht synchron mit den AirPlay-Räumen, es spielt etwa zwei Sekunden später. Für Multiroom AirPlay nehmen.",
+    waitingFor: "wechselt, warte auf %1", offsetHint: "Verzögert diesen Raum gegenüber den anderen.",
     pin: "PIN", pinHint: "%1 zeigt eine PIN an. Gib sie hier ein, um zu koppeln.", pair: "Koppeln",
     kinds: { airplay: "AirPlay", airplay2: "AirPlay 2", chromecast: "Chromecast" },
     playing: "spielt", needsPin: "Kopplung nötig",
@@ -61,7 +65,7 @@ function isGerman(localeName) {
 }
 
 function emptyState() {
-  return { mode: "off", speakers: [], problem: "", owntoneOld: false, starting: false, logPath: "", via: {} }
+  return { mode: "off", speakers: [], problem: "", owntoneOld: false, starting: false, logPath: "", via: {}, variants: {} }
 }
 
 function selectedCount(speakers) {
@@ -151,7 +155,10 @@ function speakerByName(speakers, name) {
 // One row per device: a speaker reachable over AirPlay and Chromecast under
 // one name is one device with two connections. The row shows the connection
 // that plays, else the preferred one (via: { name: kind }), else AirPlay.
-function groupSpeakers(speakers, via) {
+// variants: { name: { kind: key } } of connections seen before; one that is
+// gone right now (a KEF playing over Chromecast stops announcing AirPlay)
+// stays selectable, marked missing.
+function groupSpeakers(speakers, via, known) {
   var order = []
   var byName = {}
   ;(speakers || []).forEach(function(speaker) {
@@ -159,14 +166,19 @@ function groupSpeakers(speakers, via) {
     byName[speaker.name].push(speaker)
   })
   return order.map(function(name) {
-    var variants = byName[name]
-    var chosen = variants.filter(function(v) { return v.selected && !v.missing })[0]
-      || variants.filter(function(v) { return via && via[name] === v.kind })[0]
-      || variants.filter(function(v) { return v.kind !== "chromecast" })[0]
-      || variants[0]
-    return Object.assign({}, chosen, {
-      variants: variants.map(function(v) { return { key: v.key, kind: v.kind } })
+    var list = byName[name]
+    var chosen = list.filter(function(v) { return v.selected && !v.missing })[0]
+      || list.filter(function(v) { return via && via[name] === v.kind })[0]
+      || list.filter(function(v) { return v.kind !== "chromecast" })[0]
+      || list[0]
+    var options = list.map(function(v) { return { key: v.key, kind: v.kind, missing: v.missing === true } })
+    var seen = known && known[name] || {}
+    Object.keys(seen).forEach(function(kind) {
+      if (!options.some(function(o) { return o.kind === kind }))
+        options.push({ key: seen[kind], kind: kind, missing: true })
     })
+    options.sort(function(a, b) { return (a.kind === "chromecast" ? 1 : 0) - (b.kind === "chromecast" ? 1 : 0) })
+    return Object.assign({}, chosen, { variants: options })
   })
 }
 

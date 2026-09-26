@@ -161,8 +161,17 @@ Behaviour worth knowing:
 - **Sync.** OwnTone times HomePods over NTP unless it may bind the PTP ports
   319/320: `sudo setcap cap_net_bind_service=+ep ~/.local/share/omarchy-multiroom-speakers/owntone/sbin/owntone`
   (again after every rebuild).
-- **Chromecast** speakers that cannot start OwnTone's receiver app (seen with
-  Samsung soundbars) are refused; use their AirPlay entry.
+- **Chromecast is not in sync.** OwnTone buffers Chromecast on its own; it
+  plays about two seconds behind the AirPlay rooms. For multiroom use a
+  device's AirPlay connection; the panel says so under the Chromecast choice.
+  Speakers that cannot start OwnTone's receiver app (seen with Samsung
+  soundbars) are refused.
+- **Switching back from Chromecast.** A device that casts (seen with KEF)
+  stops announcing AirPlay, and OwnTone does not list it again when it does.
+  The plugin remembers each device's connections, so AirPlay stays
+  selectable; when the chosen connection is still missing after 12 seconds
+  while the device is around, it restarts OwnTone (at most every five
+  minutes) and the rooms come back after a few seconds of silence.
 
 ## Keyboard and scripting
 

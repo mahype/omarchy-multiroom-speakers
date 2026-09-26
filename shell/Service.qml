@@ -102,6 +102,10 @@ Item {
   // Per room: { reason, at } of the last failure, { count, at } of retries.
   property var failures: ({})
   property var retries: ({})
+  // Since when a chosen connection is missing from OwnTone's list while its
+  // device is listed under another connection; last restart for that.
+  property real staleSince: 0
+  property real staleRestartAt: 0
 
   onWatchingChanged: if (watching) pollTimer.restart()
   // A one-off error message fades; lasting problems are shown per room.
@@ -119,7 +123,8 @@ Item {
     state = {
       mode: config.mode, speakers: config.mode === "off" ? [] : shown, problem: problem,
       owntoneOld: owntoneOld, starting: starting, logPath: logPath,
-      via: config.mode === "multiroom" ? config.multiroom.via : ({})
+      via: config.mode === "multiroom" ? config.multiroom.via : ({}),
+      variants: config.mode === "multiroom" ? config.multiroom.variants : ({})
     }
   }
 
@@ -190,6 +195,22 @@ Item {
     return out
   }
 
+  // Connections seen per device: { name: { kind: key } }.
+  function normalizeVariants(raw) {
+    var out = {}
+    if (!raw || typeof raw !== "object") return out
+    Object.keys(raw).slice(0, 64).forEach(function(name) {
+      var entry = raw[name]
+      if (!entry || typeof entry !== "object") return
+      var kinds = {}
+      Object.keys(entry).forEach(function(kind) {
+        if (["airplay", "airplay2", "chromecast"].indexOf(kind) >= 0 && entry[kind]) kinds[kind] = String(entry[kind]).slice(0, 64)
+      })
+      if (Object.keys(kinds).length > 0) out[String(name).slice(0, 128)] = kinds
+    })
+    return out
+  }
+
   function normalizeConfig(raw) {
     var value = raw && typeof raw === "object" ? raw : {}
     var direct = value.direct && typeof value.direct === "object" ? value.direct : {}
@@ -200,7 +221,8 @@ Item {
       direct: { rooms: names(direct.rooms), volumes: Multiroom.normalizeVolumes(direct.volumes) },
       multiroom: {
         rooms: names(multi.rooms), volumes: Multiroom.normalizeVolumes(multi.volumes),
-        known: normalizeKnown(multi.known), via: normalizeVia(multi.via)
+        known: normalizeKnown(multi.known), via: normalizeVia(multi.via),
+        variants: normalizeVariants(multi.variants)
       },
       returnSink: String(value.returnSink || "").slice(0, 256)
     }
@@ -322,6 +344,7 @@ Item {
     holds = ({})
     failures = ({})
     retries = ({})
+    staleSince = 0
     sinkVolumes = ({})
     polling = false
     saveConfig({ mode: next })
@@ -691,6 +714,8 @@ Item {
         starting = false
         if (problem === "owntone-failed") problem = ""
         rememberKnown(found)
+        rememberVariants(found)
+        checkStale(found)
         noticeDropouts(found)
         var list = Multiroom.withMissing(found, config.multiroom.rooms, config.multiroom.known, function(s) { return s.key })
         Multiroom.speakerChanges(speakers, list).forEach(function(line) { log(line) })
@@ -705,6 +730,18 @@ Item {
   }
 
   // Names and kinds of the chosen rooms, so they can be shown while away.
+  // { name, kind } of a key from the remembered connections.
+  function variantOf(key) {
+    var variants = config.multiroom.variants
+    var names = Object.keys(variants)
+    for (var i = 0; i < names.length; i++) {
+      var kinds = Object.keys(variants[names[i]])
+      for (var j = 0; j < kinds.length; j++)
+        if (variants[names[i]][kinds[j]] === key) return { name: names[i], kind: kinds[j] }
+    }
+    return null
+  }
+
   function rememberKnown(found) {
     var known = config.multiroom.known
     var changed = false
@@ -712,10 +749,61 @@ Item {
     config.multiroom.rooms.forEach(function(key) {
       var speaker = null
       for (var i = 0; i < found.length; i++) if (found[i].key === key) speaker = found[i]
-      next[key] = speaker ? { name: speaker.name, kind: speaker.kind } : (known[key] || { name: key, kind: "airplay2" })
+      next[key] = speaker ? { name: speaker.name, kind: speaker.kind } : (variantOf(key) || known[key] || { name: key, kind: "airplay2" })
       if (!known[key] || known[key].name !== next[key].name || known[key].kind !== next[key].kind) changed = true
     })
     if (changed || Object.keys(known).length !== Object.keys(next).length) saveMulti({ known: next })
+  }
+
+  // Which connections each device offers, so a connection that is gone for
+  // the moment can still be picked. Only devices with more than one count.
+  function rememberVariants(found) {
+    var next = JSON.parse(JSON.stringify(config.multiroom.variants))
+    var changed = false
+    var byName = {}
+    found.forEach(function(speaker) {
+      byName[speaker.name] = byName[speaker.name] || {}
+      byName[speaker.name][speaker.kind] = speaker.key
+    })
+    Object.keys(byName).forEach(function(name) {
+      var kinds = Object.assign({}, next[name] || {}, byName[name])
+      if (Object.keys(kinds).length < 2) return
+      if (JSON.stringify(kinds) !== JSON.stringify(next[name] || {})) { next[name] = kinds; changed = true }
+    })
+    if (changed) saveMulti({ variants: next })
+  }
+
+  // OwnTone drops a device's AirPlay entry while it casts and does not take it
+  // back when the device announces AirPlay again. A chosen connection that
+  // stays missing while its device is listed otherwise gets OwnTone
+  // restarted, at most every five minutes; the rooms come back as after any
+  // start.
+  function checkStale(found) {
+    var stale = config.multiroom.rooms.filter(function(key) {
+      if (found.some(function(speaker) { return speaker.key === key })) return false
+      var info = variantOf(key)
+      return info && found.some(function(speaker) { return speaker.name === info.name })
+    })
+    if (stale.length === 0) { staleSince = 0; return }
+    var now = Date.now()
+    if (staleSince === 0) {
+      staleSince = now
+      log("waiting for OwnTone to list " + stale.map(function(key) {
+        var info = variantOf(key)
+        return info.name + " [" + info.kind + "]"
+      }).join(", "))
+      return
+    }
+    if (now - staleSince < 12000 || now - staleRestartAt < 300000) return
+    log("still not listed, restarting OwnTone")
+    staleSince = 0
+    staleRestartAt = now
+    stopOwntone(guard(function() {
+      owntoneReadyAt = 0
+      restoreUntil = Date.now() + restoreWindow
+      pipePending = true
+      ensureOwntone(function() { pollTimer.restart() })
+    }))
   }
 
   // A chosen room that OwnTone deselected on its own lost its session.
@@ -893,15 +981,37 @@ Item {
   // Picks how a device is reached (AirPlay or Chromecast). A playing device
   // switches over right away.
   function setVariant(name, kind) {
+    if (config.mode !== "multiroom") return false
     var variants = speakers.filter(function(s) { return s.name === name })
-    var target = variants.filter(function(s) { return s.kind === kind })[0]
-    if (config.mode !== "multiroom" || !target) return false
+    var target = variants.filter(function(s) { return s.kind === kind && !s.missing })[0]
+    var knownKey = (config.multiroom.variants[name] || {})[kind]
+    if (!target && !knownKey) return false
     var via = Object.assign({}, config.multiroom.via)
     via[name] = kind
     saveMulti({ via: via })
-    log("connection of " + name + ": " + kind)
-    var playing = variants.some(function(s) { return s.key !== target.key && (s.selected || config.multiroom.rooms.indexOf(s.key) >= 0) })
-    if (playing) setSelected(target.key, true)
+    log("connection of " + name + ": " + kind + (target ? "" : " (not announced right now)"))
+    var playing = variants.some(function(s) {
+      return s.kind !== kind && (s.selected || config.multiroom.rooms.indexOf(s.key) >= 0)
+    })
+    if (!playing) return true
+    if (target) { setSelected(target.key, true); return true }
+    // The device announces the other connection only once the current one
+    // ends (a KEF casting drops AirPlay): end it, keep the room chosen under
+    // the new connection and let retryDropped() join it when it shows up.
+    variants.forEach(function(s) {
+      if (s.missing || s.kind === kind) return
+      hold(s.key, { selected: false })
+      if (s.selected) selectOutput(s, false)
+    })
+    var rooms = config.multiroom.rooms.filter(function(key) {
+      return !variants.some(function(s) { return s.key === key })
+    })
+    rooms.push(knownKey)
+    saveMulti({ rooms: rooms })
+    var next = Object.assign({}, retries)
+    delete next[knownKey]
+    retries = next
+    log("waiting for " + name + " [" + kind + "] to announce itself")
     return true
   }
 

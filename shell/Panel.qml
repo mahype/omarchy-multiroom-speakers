@@ -22,7 +22,7 @@ Panel {
   readonly property string mode: state.mode
   readonly property bool switching: service ? service.switching : false
   // One row per device; AirPlay and Chromecast of one speaker share it.
-  readonly property var devices: Model.groupSpeakers(state.speakers, state.via)
+  readonly property var devices: Model.groupSpeakers(state.speakers, state.via, state.variants)
 
   // Only one device is expanded at a time; nothing stays expanded between
   // opens. Kept by name: the key changes with the connection.

@@ -82,6 +82,14 @@ Column {
         fontSize: Style.font.bodySmall
         onChanged: function(value) { if (row.service) row.service.setVariant(row.speaker.name, value) }
       }
+
+      HintText {
+        visible: row.speaker !== null && row.speaker.kind === "chromecast"
+        bar: row.bar
+        width: parent.width
+        text: row.strings.castHint
+        font.pixelSize: Style.font.caption
+      }
     }
 
     Column {
