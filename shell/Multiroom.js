@@ -20,8 +20,9 @@ var COMBINE_SINK = "omarchy_multiroom_direct"
 var OWNTONE_UNIT = "omarchy-multiroom-speakers-owntone"
 var PIPE_NAME = "Omarchy"
 var OWNTONE_PORT = 3689
-// Fixed UDP ports for AirPlay 2 timing and control, so a firewall rule can
-// allow them (6001/6002 are PipeWire's RAOP ports).
+// Fixed UDP ports for AirPlay 2 timing and control (6001/6002 are PipeWire's
+// RAOP ports). Speakers also connect back on changing TCP ports, so the
+// README's firewall section allows the local network instead.
 var CONTROL_PORT = 6003
 var TIMING_PORT = 6004
 
