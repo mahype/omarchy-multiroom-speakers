@@ -53,8 +53,8 @@ suits games or calls.
 
 Sonos speakers with AirPlay 2 (One, Era, Five, Move, Roam, Beam, Arc, Port,
 Amp, Play:5 gen 2, …) appear in both modes like any other AirPlay speaker and
-play in sync with HomePods in multiroom mode. Direct mode needs UDP ports
-6001–6002 open (see [Firewall](#firewall)).
+play in sync with HomePods in multiroom mode. Behind a firewall they need
+your local network allowed (see [Firewall](#firewall)).
 
 Older Sonos speakers without AirPlay (Play:1, Play:3, Play:5 gen 1, Playbar,
 Connect) are not supported; [Sonomarchy](https://github.com/nixfred/sonomarchy)
@@ -81,12 +81,27 @@ streams to those over UPnP.
 
 ### Firewall
 
-With ufw active, the speakers must be able to answer:
+With a firewall such as ufw active, the speakers must be able to reach this
+computer. Opening single ports is not enough: besides mDNS (5353/udp) and
+the fixed timing and control ports (6001–6002 direct, 6003–6004 OwnTone),
+speakers open TCP connections back to this computer on changing high ports
+(event channel). Blocked, a room is shown as refusing in multiroom mode
+("No response to SETUP" in `owntone.log`) and stays silent in direct mode
+without an error.
+
+Allow your local network instead, here `10.0.10.0/24` on `wlp3s0` (see
+`ip -br addr`):
 
 ```bash
-sudo ufw allow 5353/udp        # mDNS discovery
-sudo ufw allow 6001:6004/udp   # 6001–6002 direct (RAOP), 6003–6004 OwnTone AirPlay 2
+sudo ufw allow in on wlp3s0 from 10.0.10.0/24
 ```
+
+Every device in that network can then reach this computer; the internet
+stays blocked. `journalctl -k | grep "UFW BLOCK"` shows what is still
+blocked.
+
+Spotify Connect or the Sonos app can play while AirPlay fails: there the
+speaker fetches the music itself, and nothing has to reach this computer.
 
 ## Installation
 
@@ -199,7 +214,7 @@ omarchy-shell io.github.mahype.omarchy-multiroom-speakers status
 ## Development
 
 ```bash
-node --test tests/          # unit tests
+node --test tests/*.test.js # unit tests
 bash tests/check-manifest.sh
 ```
 
